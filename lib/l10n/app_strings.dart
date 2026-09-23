@@ -1,0 +1,862 @@
+import 'package:flutter/widgets.dart';
+import 'account_strings.dart';
+
+/// Lokalizasyon Redlight — 4 lang: fr (default), ht, en, es.
+///
+/// Itilizasyon nan yon ConsumerWidget:
+///   final s = ref.watch(stringsProvider);
+///   Text(s.t('cart_title'))
+///   Text(s.t('order_number', {'id': order.id}))
+class S {
+  const S._(this._m);
+
+  final Map<String, String> _m;
+
+  /// Jwenn tèks la pou kle a; ranplase {param} yo si yo bay.
+  /// Si kle a pa egziste, retounen kle a (fasil pou wè sa ki manke).
+  String t(String key, [Map<String, String>? args]) {
+    var value = _m[key] ?? (key.startsWith('commerce_') ? '${_m['commerce_error']} (${key.substring(9)})' : key);
+    if (args != null) {
+      args.forEach((k, v) => value = value.replaceAll('{$k}', v));
+    }
+    return value;
+  }
+
+  static S of(Locale locale) =>
+      S._({...AppStrings.maps[locale.languageCode] ?? AppStrings.maps['fr']!, ...accountTranslations(locale.languageCode)});
+}
+
+/// Non lang yo nan pwòp lang yo (pa tradui yo).
+const languageOptions = <(String code, String name, String subtitle)>[
+  ('fr', 'Français', 'Langue par défaut'),
+  ('ht', 'Kreyòl ayisyen', 'Lang natifnatal'),
+  ('en', 'English', 'English'),
+  ('es', 'Español', 'Español'),
+];
+
+const supportedLocales = <Locale>[
+  Locale('fr'),
+  Locale('ht'),
+  Locale('en'),
+  Locale('es'),
+];
+
+/// Label estati kòmand selon lang aktif la.
+String orderStatusLabel(S s, String status) => s.t('status_$status');
+
+/// Label mòd peman selon lang aktif la.
+String paymentLabel(S s, String? method) =>
+    method == null ? '—' : s.t('payment_$method');
+
+abstract final class AppStrings {
+  static const maps = <String, Map<String, String>>{
+    'fr': _fr,
+    'ht': _ht,
+    'en': _en,
+    'es': _es,
+  };
+
+  // ---------------------------------------------------------------- FRANÇAIS
+  static const _fr = <String, String>{
+    // Commun
+    'continue': 'Continuer',
+    'retry': 'Réessayer',
+    'cancel': 'Annuler',
+    'no': 'Non',
+    'yes_delete': 'Oui, supprimer',
+    'yes_cancel': 'Oui, annuler',
+    'total': 'Total',
+    'save': 'Enregistrer',
+    'create': 'Créer',
+    'generic_error': 'Une erreur est survenue. Réessayez.',
+    'connection_error': 'Vérifiez votre connexion et réessayez.',
+    'min': 'Min',
+    'max': 'Max',
+
+    // Langue
+    'choose_language': 'Choisissez votre langue',
+    'choose_language_sub':
+        'Vous pourrez la changer plus tard dans votre profil.',
+    'language': 'Langue',
+
+    // Onboarding
+    'ob1_title': 'Trouvez vos pièces',
+    'ob1_sub':
+        'Des pièces d’origine pour votre voiture en quelques secondes — moteur, freins, batterie et plus.',
+    'ob2_title': 'Livraison rapide',
+    'ob2_sub':
+        'Nous livrons dans tout le pays, vite et en sécurité, jusqu’à votre porte.',
+    'ob3_title': 'Paiement facile',
+    'ob3_sub':
+        'Payez avec MonCash ou en espèces à la réception de la pièce.',
+    'skip': 'Passer',
+    'get_started': 'Commencer',
+
+    // Auth
+    'full_name': 'Nom complet',
+    'email': 'E-mail',
+    'email_invalid': 'E-mail invalide',
+    'password': 'Mot de passe',
+    'password_short':
+        'Le mot de passe doit contenir au moins 6 caractères',
+    'sign_in': 'Se connecter',
+    'create_account': 'Créer un compte',
+    'no_account': 'Pas de compte ? Créez-en un',
+    'have_account': 'Déjà un compte ? Connectez-vous',
+    'continue_guest': 'Continuer en invité',
+    'account_created':
+        'Compte créé — vérifiez votre e-mail si nécessaire.',
+
+    // Nav
+    'nav_home': 'Accueil',
+    'nav_search': 'Rechercher',
+    'nav_cart': 'Panier',
+    'nav_favorites': 'Favoris',
+    'nav_profile': 'Profil',
+
+    // Accueil
+    'search_hint': 'Rechercher une pièce...',
+    'categories': 'Catégories',
+    'popular': 'Populaires',
+    'new_arrivals': 'Nouveautés',
+    'products_load_error': 'Impossible de charger les produits',
+
+    // Catalogue
+    'all': 'Tous',
+    'no_results': 'Aucun résultat',
+    'no_results_sub': 'Essayez un autre mot ou retirez les filtres.',
+    'filters': 'Filtres',
+    'sort_by': 'Trier par',
+    'sort_newest': 'Plus récents',
+    'sort_price_asc': 'Prix : croissant',
+    'sort_price_desc': 'Prix : décroissant',
+    'sort_name_asc': 'Nom A → Z',
+    'car_brand': 'Marque',
+    'price_htg': 'Prix (HTG)',
+    'reset': 'Réinitialiser',
+    'apply': 'Appliquer',
+
+    // Produit
+    'add_to_cart': 'Ajouter au panier',
+    'added_to_cart': 'Ajouté au panier',
+    'view_cart': 'Voir le panier',
+    'compatible_with': 'Compatible avec',
+    'description': 'Description',
+    'out_of_stock': 'Rupture de stock',
+    'stock_out': 'Épuisé',
+    'stock_low': 'Stock limité',
+    'stock_in': 'En stock',
+
+    // Panier
+    'cart_title': 'Votre panier',
+    'cart_load_error': 'Impossible de charger le panier',
+    'cart_empty': 'Votre panier est vide',
+    'cart_empty_sub':
+        'Ajoutez des pièces du catalogue pour les voir ici.',
+    'checkout': 'Passer commande',
+
+    // Checkout
+    'order': 'Commande',
+    'sign_in_to_continue': 'Connectez-vous pour continuer',
+    'need_account_to_order':
+        'Vous devez avoir un compte pour passer commande.',
+    'sign_in_or_create': 'Connexion / Créer un compte',
+    'order_confirmed': 'Commande confirmée !',
+    'order_number': 'Commande n°{id}',
+    'view_my_orders': 'Voir mes commandes',
+    'continue_shopping': 'Continuer vos achats',
+    'delivery_address': 'Adresse de livraison',
+    'address_invalid': 'Entrez une adresse de livraison complète',
+    'address_hint': 'Ex. : 12, Rue Capois, Port-au-Prince',
+    'payment_method': 'Mode de paiement',
+    'payment_moncash': 'MonCash',
+    'moncash_sub':
+        'Paiement mobile — sera activé quand l’API sera prête',
+    'payment_cash_on_delivery': 'Paiement à la livraison',
+    'cash_on_delivery_sub': 'Payez en espèces à la réception',
+    'summary': 'Résumé',
+    'confirm_order': 'Confirmer la commande',
+    'insufficient_stock': 'Un produit n’a plus assez de stock.',
+    'order_failed': 'La commande a échoué. Réessayez.',
+
+    // Commandes
+    'my_orders': 'Mes commandes',
+    'sign_in_to_see_orders':
+        'Connectez-vous pour voir vos commandes',
+    'orders_load_error': 'Impossible de charger les commandes',
+    'no_orders': 'Aucune commande pour le moment',
+    'no_orders_sub': 'Vos commandes apparaîtront ici.',
+    'cancel_order_q': 'Annuler la commande ?',
+    'cancel_order_warn': 'Vous ne pourrez plus l’annuler après.',
+    'cancel_order_failed': 'Impossible d’annuler la commande.',
+    'part': 'Pièce',
+    'status_pending': 'En attente',
+    'status_confirmed': 'Confirmée',
+    'status_shipped': 'En route',
+    'status_delivered': 'Livrée',
+    'status_cancelled': 'Annulée',
+
+    // Favoris
+    'favorites_load_error': 'Impossible de charger les favoris',
+    'no_favorites': 'Aucun favori',
+    'no_favorites_sub':
+        'Touchez le cœur sur une pièce pour l’ajouter ici.',
+
+    // Profil
+    'profile': 'Profil',
+    'guest': 'Vous êtes invité',
+    'guest_sub':
+        'Créez un compte pour commander et suivre vos livraisons.',
+    'my_favorites': 'Mes favoris',
+    'sign_out': 'Se déconnecter',
+
+    // Admin
+    'admin_email': 'E-mail admin',
+    'enter_password': 'Entrez le mot de passe',
+    'no_admin_access': 'Ce compte n’a pas d’accès admin.',
+    'back_to_store': 'Retour à la boutique',
+    'access_denied': 'Accès refusé',
+    'not_admin': 'Ce compte n’est pas dans la liste des admins.',
+    'view_store': 'Voir la boutique',
+    'dashboard': 'Tableau de bord',
+    'products': 'Produits',
+    'orders': 'Commandes',
+    'stats_load_error': 'Impossible de charger les statistiques.',
+    'orders_today': 'Commandes aujourd’hui',
+    'pending': 'En attente',
+    'total_sales': 'Ventes totales',
+    'recent_orders': 'Dernières commandes',
+    'items_count': '{count} articles',
+    'add_product': 'Ajouter un produit',
+    'no_products': 'Aucun produit',
+    'no_products_sub':
+        'Cliquez sur « Ajouter un produit » pour commencer.',
+    'price': 'Prix',
+    'stock': 'Stock',
+    'actions': 'Actions',
+    'edit': 'Modifier',
+    'delete': 'Supprimer',
+    'delete_product_q': 'Supprimer le produit ?',
+    'delete_product_warn':
+        '« {name} » disparaîtra pour tout le monde.',
+    'delete_product_failed': 'Impossible de supprimer le produit.',
+    'edit_product': 'Modifier le produit',
+    'name_required': 'Nom obligatoire',
+    'product_name': 'Nom du produit',
+    'invalid_price': 'Prix invalide',
+    'category': 'Catégorie',
+    'models_hint':
+        'Modèles compatibles (séparés par des virgules) : Toyota Corolla 2015-2020, Universel',
+    'images': 'Images',
+    'uploading': 'Envoi en cours…',
+    'add_image': 'Ajouter une image',
+    'no_images': 'Aucune image',
+    'upload_failed': 'L’envoi de l’image a échoué.',
+    'save_failed':
+        'L’enregistrement a échoué. Vérifiez vos droits.',
+    'save_failed_short': 'L’enregistrement a échoué.',
+    'create_product': 'Créer le produit',
+    'add_category': 'Ajouter une catégorie',
+    'categories_load_error':
+        'Impossible de charger les catégories',
+    'no_categories': 'Aucune catégorie',
+    'icon': 'Icon',
+    'delete_category_q': 'Supprimer la catégorie ?',
+    'delete_category_warn':
+        '« {name} » sera supprimée. Les produits liés resteront sans catégorie.',
+    'delete_category_failed':
+        'Impossible de supprimer la catégorie.',
+    'edit_category': 'Modifier la catégorie',
+    'category_name': 'Nom de la catégorie',
+    'no_orders_admin': 'Aucune commande',
+    'payment': 'Paiement',
+    'status_change_failed': 'Impossible de changer le statut.',
+  };
+
+  // ---------------------------------------------------------------- KREYÒL
+  static const _ht = <String, String>{
+    'continue': 'Kontinye',
+    'retry': 'Reeseye',
+    'cancel': 'Anile',
+    'no': 'Non',
+    'yes_delete': 'Wi, efase',
+    'yes_cancel': 'Wi, anile',
+    'total': 'Total',
+    'save': 'Sovgade',
+    'create': 'Kreye',
+    'generic_error': 'Yon erè fèt. Eseye ankò.',
+    'connection_error': 'Verifye koneksyon ou epi eseye ankò.',
+    'min': 'Min',
+    'max': 'Max',
+
+    'choose_language': 'Chwazi lang ou',
+    'choose_language_sub':
+        'Ou ka chanje l pita nan pwofil ou.',
+    'language': 'Lang',
+
+    'ob1_title': 'Chèche pyès ou',
+    'ob1_sub':
+        'Jwenn pyès orijinèl pou machin ou nan kèk segond — motè, fren, batri ak plis.',
+    'ob2_title': 'Livrezon rapid',
+    'ob2_sub':
+        'Nou livre nan tout peyi a, vit e an sekirite, jouk devan pòt ou.',
+    'ob3_title': 'Peman fasil',
+    'ob3_sub':
+        'Peye ak MonCash oswa nan lajan kach lè ou resevwa pyès la.',
+    'skip': 'Sote',
+    'get_started': 'Kòmanse',
+
+    'full_name': 'Non konplè',
+    'email': 'Imèl',
+    'email_invalid': 'Imèl pa valab',
+    'password': 'Modpas',
+    'password_short': 'Modpas dwe gen omwen 6 karaktè',
+    'sign_in': 'Konekte',
+    'create_account': 'Kreye kont',
+    'no_account': 'Pa gen kont? Kreye youn',
+    'have_account': 'Gen kont deja? Konekte',
+    'continue_guest': 'Kontinye kòm envite',
+    'account_created': 'Kont kreye — verifye imèl ou si sa mande.',
+
+    'nav_home': 'Akèy',
+    'nav_search': 'Chèche',
+    'nav_cart': 'Panyen',
+    'nav_favorites': 'Favori',
+    'nav_profile': 'Pwofil',
+
+    'search_hint': 'Chèche yon pyès...',
+    'categories': 'Kategori',
+    'popular': 'Pi popilè',
+    'new_arrivals': 'Nouvo',
+    'products_load_error': 'Pa ka chaje pwodwi yo',
+
+    'all': 'Tout',
+    'no_results': 'Pa gen rezilta',
+    'no_results_sub': 'Eseye yon lòt mo oswa retire filtè yo.',
+    'filters': 'Filtè',
+    'sort_by': 'Triye pa',
+    'sort_newest': 'Pi resan',
+    'sort_price_asc': 'Pri: pi ba → pi wo',
+    'sort_price_desc': 'Pri: pi wo → pi ba',
+    'sort_name_asc': 'Non A → Z',
+    'car_brand': 'Mak machin',
+    'price_htg': 'Pri (HTG)',
+    'reset': 'Reyalin',
+    'apply': 'Aplike',
+
+    'add_to_cart': 'Ajoute nan panyen',
+    'added_to_cart': 'Ajoute nan panyen',
+    'view_cart': 'Wè panyen',
+    'compatible_with': 'Konpatib ak',
+    'description': 'Deskripsyon',
+    'out_of_stock': 'Pa nan stock',
+    'stock_out': 'Finì',
+    'stock_low': 'Kti restan',
+    'stock_in': 'Nan stock',
+
+    'cart_title': 'Panyen ou',
+    'cart_load_error': 'Pa ka chaje panyen an',
+    'cart_empty': 'Panyen ou vid',
+    'cart_empty_sub':
+        'Ajoute pyès nan katalòg la pou wè yo isit la.',
+    'checkout': 'Pase kòmand',
+
+    'order': 'Kòmand',
+    'sign_in_to_continue': 'Konekte pou kontinye',
+    'need_account_to_order':
+        'Ou dwe gen yon kont pou pase yon kòmand.',
+    'sign_in_or_create': 'Konekte / Kreye kont',
+    'order_confirmed': 'Kòmand konfime!',
+    'order_number': 'Kòmand #{id}',
+    'view_my_orders': 'Wè kòmand mwen',
+    'continue_shopping': 'Kontinye achte',
+    'delivery_address': 'Adrès livrezon',
+    'address_invalid': 'Mete yon adrès livrezon konplè',
+    'address_hint': 'Egzanp: 12, Ri Capois, Pòtoprens',
+    'payment_method': 'Mòd peman',
+    'payment_moncash': 'MonCash',
+    'moncash_sub': 'Peman mobil — ap aktive lè API la pare',
+    'payment_cash_on_delivery': 'Peye lè livrezon',
+    'cash_on_delivery_sub': 'Peye nan lajan kach lè pyès la rive',
+    'summary': 'Rezime',
+    'confirm_order': 'Konfime kòmand',
+    'insufficient_stock': 'Yon pwodwi pa gen ase stock ankò.',
+    'order_failed': 'Kòmand lan pa pase. Eseye ankò.',
+
+    'my_orders': 'Kòmand mwen',
+    'sign_in_to_see_orders': 'Konekte pou wè kòmand ou',
+    'orders_load_error': 'Pa ka chaje kòmand yo',
+    'no_orders': 'Pa gen kòmand ankò',
+    'no_orders_sub': 'Kòmand ou yo ap parèt isit la.',
+    'cancel_order_q': 'Anile kòmand?',
+    'cancel_order_warn': 'Ou pap ka anile li ankò apre sa.',
+    'cancel_order_failed': 'Pa ka anile kòmand lan.',
+    'part': 'Pyès',
+    'status_pending': 'An atant',
+    'status_confirmed': 'Konfime',
+    'status_shipped': 'An wout',
+    'status_delivered': 'Livre',
+    'status_cancelled': 'Anile',
+
+    'favorites_load_error': 'Pa ka chaje favori yo',
+    'no_favorites': 'Pa gen favori',
+    'no_favorites_sub':
+        'Peze sou kè a sou nenpòt pyès pou mete l la.',
+
+    'profile': 'Pwofil',
+    'guest': 'Ou se envite',
+    'guest_sub':
+        'Kreye yon kont pou pase kòmand ak swiv livrezon yo.',
+    'my_favorites': 'Favori mwen',
+    'sign_out': 'Dekonekte',
+
+    'admin_email': 'Imèl admin',
+    'enter_password': 'Mete modpas la',
+    'no_admin_access': 'Kont sa a pa gen aksè admin.',
+    'back_to_store': 'Retounen nan magazen an',
+    'access_denied': 'Aksè refize',
+    'not_admin': 'Kont sa a pa nan lis admin yo.',
+    'view_store': 'Wè magazen an',
+    'dashboard': 'Dashboard',
+    'products': 'Pwodwi',
+    'orders': 'Kòmand',
+    'stats_load_error': 'Pa ka chaje estatistik yo.',
+    'orders_today': 'Kòmand jodi a',
+    'pending': 'An atant',
+    'total_sales': 'Total vant',
+    'recent_orders': 'Dènye kòmand',
+    'items_count': '{count} atik',
+    'add_product': 'Ajoute pwodwi',
+    'no_products': 'Pa gen pwodwi',
+    'no_products_sub': 'Klike "Ajoute pwodwi" pou kòmanse.',
+    'price': 'Pri',
+    'stock': 'Stock',
+    'actions': 'Aksyon',
+    'edit': 'Modifye',
+    'delete': 'Efase',
+    'delete_product_q': 'Efase pwodwi?',
+    'delete_product_warn': '"{name}" ap disparèt pou tout moun.',
+    'delete_product_failed': 'Pa ka efase pwodwi a.',
+    'edit_product': 'Modifye pwodwi',
+    'name_required': 'Non obligatwa',
+    'product_name': 'Non pwodwi',
+    'invalid_price': 'Pri pa valab',
+    'category': 'Kategori',
+    'models_hint':
+        'Modèl konpatib (separe pa vigil): Toyota Corolla 2015-2020, Universal',
+    'images': 'Imaj',
+    'uploading': 'Ap monte...',
+    'add_image': 'Ajoute imaj',
+    'no_images': 'Pa gen imaj',
+    'upload_failed': 'Upload imaj la pa pase.',
+    'save_failed': 'Sovgad la pa pase. Verifye dwa ou.',
+    'save_failed_short': 'Sovgad la pa pase.',
+    'create_product': 'Kreye pwodwi',
+    'add_category': 'Ajoute kategori',
+    'categories_load_error': 'Pa ka chaje kategori yo',
+    'no_categories': 'Pa gen kategori',
+    'icon': 'Icon',
+    'delete_category_q': 'Efase kategori?',
+    'delete_category_warn':
+        '"{name}" ap efase. Pwodwi ki lye ak li ap rete men san kategori.',
+    'delete_category_failed': 'Pa ka efase kategori a.',
+    'edit_category': 'Modifye kategori',
+    'category_name': 'Non kategori',
+    'no_orders_admin': 'Pa gen kòmand',
+    'payment': 'Peman',
+    'status_change_failed': 'Pa ka chanje estati a.',
+  };
+
+  // ---------------------------------------------------------------- ENGLISH
+  static const _en = <String, String>{
+    'continue': 'Continue',
+    'retry': 'Retry',
+    'cancel': 'Cancel',
+    'no': 'No',
+    'yes_delete': 'Yes, delete',
+    'yes_cancel': 'Yes, cancel',
+    'total': 'Total',
+    'save': 'Save',
+    'create': 'Create',
+    'generic_error': 'Something went wrong. Try again.',
+    'connection_error': 'Check your connection and try again.',
+    'min': 'Min',
+    'max': 'Max',
+
+    'choose_language': 'Choose your language',
+    'choose_language_sub':
+        'You can change it later in your profile.',
+    'language': 'Language',
+
+    'ob1_title': 'Find your parts',
+    'ob1_sub':
+        'Get original parts for your car in seconds — engine, brakes, battery and more.',
+    'ob2_title': 'Fast delivery',
+    'ob2_sub':
+        'We deliver anywhere in the country, fast and safe, right to your door.',
+    'ob3_title': 'Easy payment',
+    'ob3_sub':
+        'Pay with MonCash or in cash when you receive the part.',
+    'skip': 'Skip',
+    'get_started': 'Get started',
+
+    'full_name': 'Full name',
+    'email': 'Email',
+    'email_invalid': 'Invalid email',
+    'password': 'Password',
+    'password_short': 'Password must be at least 6 characters',
+    'sign_in': 'Sign in',
+    'create_account': 'Create account',
+    'no_account': 'No account? Create one',
+    'have_account': 'Already have an account? Sign in',
+    'continue_guest': 'Continue as guest',
+    'account_created':
+        'Account created — check your email if required.',
+
+    'nav_home': 'Home',
+    'nav_search': 'Search',
+    'nav_cart': 'Cart',
+    'nav_favorites': 'Favorites',
+    'nav_profile': 'Profile',
+
+    'search_hint': 'Search a part...',
+    'categories': 'Categories',
+    'popular': 'Popular',
+    'new_arrivals': 'New',
+    'products_load_error': 'Couldn’t load products',
+
+    'all': 'All',
+    'no_results': 'No results',
+    'no_results_sub': 'Try another word or remove the filters.',
+    'filters': 'Filters',
+    'sort_by': 'Sort by',
+    'sort_newest': 'Newest',
+    'sort_price_asc': 'Price: low → high',
+    'sort_price_desc': 'Price: high → low',
+    'sort_name_asc': 'Name A → Z',
+    'car_brand': 'Brand',
+    'price_htg': 'Price (HTG)',
+    'reset': 'Reset',
+    'apply': 'Apply',
+
+    'add_to_cart': 'Add to cart',
+    'added_to_cart': 'Added to cart',
+    'view_cart': 'View cart',
+    'compatible_with': 'Compatible with',
+    'description': 'Description',
+    'out_of_stock': 'Out of stock',
+    'stock_out': 'Sold out',
+    'stock_low': 'Low stock',
+    'stock_in': 'In stock',
+
+    'cart_title': 'Your cart',
+    'cart_load_error': 'Couldn’t load the cart',
+    'cart_empty': 'Your cart is empty',
+    'cart_empty_sub':
+        'Add parts from the catalog to see them here.',
+    'checkout': 'Checkout',
+
+    'order': 'Order',
+    'sign_in_to_continue': 'Sign in to continue',
+    'need_account_to_order':
+        'You need an account to place an order.',
+    'sign_in_or_create': 'Sign in / Create account',
+    'order_confirmed': 'Order confirmed!',
+    'order_number': 'Order #{id}',
+    'view_my_orders': 'View my orders',
+    'continue_shopping': 'Continue shopping',
+    'delivery_address': 'Delivery address',
+    'address_invalid': 'Enter a complete delivery address',
+    'address_hint': 'E.g.: 12 Capois St, Port-au-Prince',
+    'payment_method': 'Payment method',
+    'payment_moncash': 'MonCash',
+    'moncash_sub':
+        'Mobile payment — enabled when the API is ready',
+    'payment_cash_on_delivery': 'Cash on delivery',
+    'cash_on_delivery_sub': 'Pay in cash when the part arrives',
+    'summary': 'Summary',
+    'confirm_order': 'Confirm order',
+    'insufficient_stock': 'A product no longer has enough stock.',
+    'order_failed': 'The order failed. Try again.',
+
+    'my_orders': 'My orders',
+    'sign_in_to_see_orders': 'Sign in to see your orders',
+    'orders_load_error': 'Couldn’t load orders',
+    'no_orders': 'No orders yet',
+    'no_orders_sub': 'Your orders will appear here.',
+    'cancel_order_q': 'Cancel order?',
+    'cancel_order_warn': 'You won’t be able to undo this.',
+    'cancel_order_failed': 'Couldn’t cancel the order.',
+    'part': 'Part',
+    'status_pending': 'Pending',
+    'status_confirmed': 'Confirmed',
+    'status_shipped': 'Shipped',
+    'status_delivered': 'Delivered',
+    'status_cancelled': 'Cancelled',
+
+    'favorites_load_error': 'Couldn’t load favorites',
+    'no_favorites': 'No favorites',
+    'no_favorites_sub':
+        'Tap the heart on any part to add it here.',
+
+    'profile': 'Profile',
+    'guest': 'You’re a guest',
+    'guest_sub':
+        'Create an account to order and track your deliveries.',
+    'my_favorites': 'My favorites',
+    'sign_out': 'Sign out',
+
+    'admin_email': 'Admin email',
+    'enter_password': 'Enter the password',
+    'no_admin_access': 'This account has no admin access.',
+    'back_to_store': 'Back to store',
+    'access_denied': 'Access denied',
+    'not_admin': 'This account is not in the admin list.',
+    'view_store': 'View store',
+    'dashboard': 'Dashboard',
+    'products': 'Products',
+    'orders': 'Orders',
+    'stats_load_error': 'Couldn’t load statistics.',
+    'orders_today': 'Orders today',
+    'pending': 'Pending',
+    'total_sales': 'Total sales',
+    'recent_orders': 'Recent orders',
+    'items_count': '{count} items',
+    'add_product': 'Add product',
+    'no_products': 'No products',
+    'no_products_sub': 'Click "Add product" to get started.',
+    'price': 'Price',
+    'stock': 'Stock',
+    'actions': 'Actions',
+    'edit': 'Edit',
+    'delete': 'Delete',
+    'delete_product_q': 'Delete product?',
+    'delete_product_warn':
+        '"{name}" will disappear for everyone.',
+    'delete_product_failed': 'Couldn’t delete the product.',
+    'edit_product': 'Edit product',
+    'name_required': 'Name required',
+    'product_name': 'Product name',
+    'invalid_price': 'Invalid price',
+    'category': 'Category',
+    'models_hint':
+        'Compatible models (comma separated): Toyota Corolla 2015-2020, Universal',
+    'images': 'Images',
+    'uploading': 'Uploading…',
+    'add_image': 'Add image',
+    'no_images': 'No images',
+    'upload_failed': 'Image upload failed.',
+    'save_failed': 'Save failed. Check your permissions.',
+    'save_failed_short': 'Save failed.',
+    'create_product': 'Create product',
+    'add_category': 'Add category',
+    'categories_load_error': 'Couldn’t load categories',
+    'no_categories': 'No categories',
+    'icon': 'Icon',
+    'delete_category_q': 'Delete category?',
+    'delete_category_warn':
+        '"{name}" will be deleted. Linked products will keep no category.',
+    'delete_category_failed': 'Couldn’t delete the category.',
+    'edit_category': 'Edit category',
+    'category_name': 'Category name',
+    'no_orders_admin': 'No orders',
+    'payment': 'Payment',
+    'status_change_failed': 'Couldn’t change the status.',
+  };
+
+  // ---------------------------------------------------------------- ESPAÑOL
+  static const _es = <String, String>{
+    'continue': 'Continuar',
+    'retry': 'Reintentar',
+    'cancel': 'Cancelar',
+    'no': 'No',
+    'yes_delete': 'Sí, eliminar',
+    'yes_cancel': 'Sí, cancelar',
+    'total': 'Total',
+    'save': 'Guardar',
+    'create': 'Crear',
+    'generic_error': 'Ocurrió un error. Inténtalo de nuevo.',
+    'connection_error': 'Verifica tu conexión e inténtalo de nuevo.',
+    'min': 'Mín',
+    'max': 'Máx',
+
+    'choose_language': 'Elige tu idioma',
+    'choose_language_sub': 'Puedes cambiarlo luego en tu perfil.',
+    'language': 'Idioma',
+
+    'ob1_title': 'Encuentra tus piezas',
+    'ob1_sub':
+        'Consigue piezas originales para tu carro en segundos — motor, frenos, batería y más.',
+    'ob2_title': 'Entrega rápida',
+    'ob2_sub':
+        'Entregamos en todo el país, rápido y seguro, hasta tu puerta.',
+    'ob3_title': 'Pago fácil',
+    'ob3_sub':
+        'Paga con MonCash o en efectivo al recibir la pieza.',
+    'skip': 'Omitir',
+    'get_started': 'Comenzar',
+
+    'full_name': 'Nombre completo',
+    'email': 'Correo electrónico',
+    'email_invalid': 'Correo inválido',
+    'password': 'Contraseña',
+    'password_short':
+        'La contraseña debe tener al menos 6 caracteres',
+    'sign_in': 'Iniciar sesión',
+    'create_account': 'Crear cuenta',
+    'no_account': '¿Sin cuenta? Crea una',
+    'have_account': '¿Ya tienes cuenta? Inicia sesión',
+    'continue_guest': 'Continuar como invitado',
+    'account_created':
+        'Cuenta creada — revisa tu correo si es necesario.',
+
+    'nav_home': 'Inicio',
+    'nav_search': 'Buscar',
+    'nav_cart': 'Carrito',
+    'nav_favorites': 'Favoritos',
+    'nav_profile': 'Perfil',
+
+    'search_hint': 'Buscar una pieza...',
+    'categories': 'Categorías',
+    'popular': 'Populares',
+    'new_arrivals': 'Novedades',
+    'products_load_error': 'No se pudieron cargar los productos',
+
+    'all': 'Todos',
+    'no_results': 'Sin resultados',
+    'no_results_sub': 'Prueba otra palabra o quita los filtros.',
+    'filters': 'Filtros',
+    'sort_by': 'Ordenar por',
+    'sort_newest': 'Más recientes',
+    'sort_price_asc': 'Precio: menor → mayor',
+    'sort_price_desc': 'Precio: mayor → menor',
+    'sort_name_asc': 'Nombre A → Z',
+    'car_brand': 'Marca',
+    'price_htg': 'Precio (HTG)',
+    'reset': 'Restablecer',
+    'apply': 'Aplicar',
+
+    'add_to_cart': 'Añadir al carrito',
+    'added_to_cart': 'Añadido al carrito',
+    'view_cart': 'Ver carrito',
+    'compatible_with': 'Compatible con',
+    'description': 'Descripción',
+    'out_of_stock': 'Agotado',
+    'stock_out': 'Agotado',
+    'stock_low': 'Pocas unidades',
+    'stock_in': 'En stock',
+
+    'cart_title': 'Tu carrito',
+    'cart_load_error': 'No se pudo cargar el carrito',
+    'cart_empty': 'Tu carrito está vacío',
+    'cart_empty_sub':
+        'Añade piezas del catálogo para verlas aquí.',
+    'checkout': 'Realizar pedido',
+
+    'order': 'Pedido',
+    'sign_in_to_continue': 'Inicia sesión para continuar',
+    'need_account_to_order':
+        'Necesitas una cuenta para hacer un pedido.',
+    'sign_in_or_create': 'Iniciar sesión / Crear cuenta',
+    'order_confirmed': '¡Pedido confirmado!',
+    'order_number': 'Pedido n.º {id}',
+    'view_my_orders': 'Ver mis pedidos',
+    'continue_shopping': 'Seguir comprando',
+    'delivery_address': 'Dirección de entrega',
+    'address_invalid': 'Ingresa una dirección de entrega completa',
+    'address_hint': 'Ej.: 12, Calle Capois, Puerto Príncipe',
+    'payment_method': 'Método de pago',
+    'payment_moncash': 'MonCash',
+    'moncash_sub':
+        'Pago móvil — se activará cuando la API esté lista',
+    'payment_cash_on_delivery': 'Pago contra entrega',
+    'cash_on_delivery_sub': 'Paga en efectivo al recibir',
+    'summary': 'Resumen',
+    'confirm_order': 'Confirmar pedido',
+    'insufficient_stock': 'Un producto ya no tiene stock suficiente.',
+    'order_failed': 'El pedido falló. Inténtalo de nuevo.',
+
+    'my_orders': 'Mis pedidos',
+    'sign_in_to_see_orders': 'Inicia sesión para ver tus pedidos',
+    'orders_load_error': 'No se pudieron cargar los pedidos',
+    'no_orders': 'Aún no hay pedidos',
+    'no_orders_sub': 'Tus pedidos aparecerán aquí.',
+    'cancel_order_q': '¿Cancelar pedido?',
+    'cancel_order_warn': 'No podrás deshacer esto después.',
+    'cancel_order_failed': 'No se pudo cancelar el pedido.',
+    'part': 'Pieza',
+    'status_pending': 'Pendiente',
+    'status_confirmed': 'Confirmado',
+    'status_shipped': 'En camino',
+    'status_delivered': 'Entregado',
+    'status_cancelled': 'Cancelado',
+
+    'favorites_load_error': 'No se pudieron cargar los favoritos',
+    'no_favorites': 'Sin favoritos',
+    'no_favorites_sub':
+        'Toca el corazón en una pieza para añadirla aquí.',
+
+    'profile': 'Perfil',
+    'guest': 'Eres invitado',
+    'guest_sub':
+        'Crea una cuenta para pedir y seguir tus entregas.',
+    'my_favorites': 'Mis favoritos',
+    'sign_out': 'Cerrar sesión',
+
+    'admin_email': 'Correo de administrador',
+    'enter_password': 'Ingresa la contraseña',
+    'no_admin_access': 'Esta cuenta no tiene acceso de administrador.',
+    'back_to_store': 'Volver a la tienda',
+    'access_denied': 'Acceso denegado',
+    'not_admin': 'Esta cuenta no está en la lista de administradores.',
+    'view_store': 'Ver tienda',
+    'dashboard': 'Panel',
+    'products': 'Productos',
+    'orders': 'Pedidos',
+    'stats_load_error': 'No se pudieron cargar las estadísticas.',
+    'orders_today': 'Pedidos hoy',
+    'pending': 'Pendientes',
+    'total_sales': 'Ventas totales',
+    'recent_orders': 'Pedidos recientes',
+    'items_count': '{count} artículos',
+    'add_product': 'Añadir producto',
+    'no_products': 'Sin productos',
+    'no_products_sub': 'Haz clic en «Añadir producto» para empezar.',
+    'price': 'Precio',
+    'stock': 'Stock',
+    'actions': 'Acciones',
+    'edit': 'Editar',
+    'delete': 'Eliminar',
+    'delete_product_q': '¿Eliminar producto?',
+    'delete_product_warn': '«{name}» desaparecerá para todos.',
+    'delete_product_failed': 'No se pudo eliminar el producto.',
+    'edit_product': 'Editar producto',
+    'name_required': 'Nombre obligatorio',
+    'product_name': 'Nombre del producto',
+    'invalid_price': 'Precio inválido',
+    'category': 'Categoría',
+    'models_hint':
+        'Modelos compatibles (separados por comas): Toyota Corolla 2015-2020, Universal',
+    'images': 'Imágenes',
+    'uploading': 'Subiendo…',
+    'add_image': 'Añadir imagen',
+    'no_images': 'Sin imágenes',
+    'upload_failed': 'La subida de la imagen falló.',
+    'save_failed': 'No se pudo guardar. Revisa tus permisos.',
+    'save_failed_short': 'No se pudo guardar.',
+    'create_product': 'Crear producto',
+    'add_category': 'Añadir categoría',
+    'categories_load_error': 'No se pudieron cargar las categorías',
+    'no_categories': 'Sin categorías',
+    'icon': 'Icono',
+    'delete_category_q': '¿Eliminar categoría?',
+    'delete_category_warn':
+        '«{name}» se eliminará. Los productos quedarán sin categoría.',
+    'delete_category_failed': 'No se pudo eliminar la categoría.',
+    'edit_category': 'Editar categoría',
+    'category_name': 'Nombre de la categoría',
+    'no_orders_admin': 'Sin pedidos',
+    'payment': 'Pago',
+    'status_change_failed': 'No se pudo cambiar el estado.',
+  };
+}
