@@ -1,8 +1,5 @@
 {
   "name": "redlight-automotive-web",
   "version": "1.0.0",
-  "description": "Redlight Automotive — Web & Admin Panel",
-  "scripts": {
-    "vercel-build": "bash build.sh"
-  }
+  "description": "Redlight Automotive — Web & Admin Panel"
 }
