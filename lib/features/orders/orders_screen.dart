@@ -12,6 +12,7 @@ import '../../models/app_order.dart';
 import '../../providers/core_providers.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/orders_provider.dart';
+import 'order_tracking_card.dart';
 
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
@@ -223,6 +224,7 @@ class _OrderCard extends ConsumerWidget {
               ],
             ],
           ),
+          OrderTrackingSection(order: order),
         ],
       ),
     );

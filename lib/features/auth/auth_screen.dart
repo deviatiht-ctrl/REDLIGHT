@@ -7,6 +7,8 @@ import '../../core/theme/colors.dart';
 import '../../core/widgets/primary_button.dart';
 import '../../providers/core_providers.dart';
 import '../../providers/locale_provider.dart';
+import '../../services/auth_service.dart';
+import '../../app.dart' show routerProvider;
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key, this.redirect});
@@ -34,7 +36,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _loading = true);
     try {
       final opened = await ref.read(authServiceProvider).signInWithGoogle();
-      if (!opened && mounted) _showError(ref.read(stringsProvider).t('generic_error'));
+      if (!opened && mounted) {
+        _showError(ref.read(stringsProvider).t('generic_error'));
+      } else {
+        await ref.read(localStoreProvider).setGuestMode(false);
+        ref.invalidate(isAdminProvider);
+        final email = ref.read(authServiceProvider).currentUser?.email;
+        bool isAdmin = AuthService.isKnownAdminEmail(email);
+        if (!isAdmin) {
+          try {
+            isAdmin = await ref.read(authServiceProvider).isAdmin();
+          } catch (_) {
+            isAdmin = false;
+          }
+        }
+        if (isAdmin) {
+          if (mounted) {
+            context.go('/admin');
+          } else {
+            ref.read(routerProvider).go('/admin');
+          }
+        }
+      }
     } catch (_) {
       if (mounted) _showError(ref.read(stringsProvider).t('generic_error'));
     } finally {
@@ -79,15 +102,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     setState(() => _loading = true);
     final auth = ref.read(authServiceProvider);
     final s = ref.read(stringsProvider);
+    final email = _emailController.text.trim().toLowerCase();
+    final isKnownAdmin = AuthService.isKnownAdminEmail(email);
+
     try {
       if (_isLogin) {
         await auth.signIn(
-          _emailController.text.trim(),
+          email,
           _passwordController.text,
         );
       } else {
         final res = await auth.signUp(
-          _emailController.text.trim(),
+          email,
           _passwordController.text,
           fullName: _nameController.text.trim(),
         );
@@ -98,8 +124,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           return;
         }
       }
-      if (mounted) await ref.read(localStoreProvider).setGuestMode(false);
-      if (mounted) _goNext();
+      await ref.read(localStoreProvider).setGuestMode(false);
+      ref.invalidate(isAdminProvider);
+      bool isAdmin = isKnownAdmin;
+      if (!isAdmin) {
+        try {
+          isAdmin = await auth.isAdmin();
+        } catch (_) {
+          isAdmin = false;
+        }
+      }
+      if (isAdmin) {
+        if (mounted) {
+          context.go('/admin');
+        } else {
+          ref.read(routerProvider).go('/admin');
+        }
+      } else {
+        if (mounted) {
+          _goNext();
+        }
+      }
     } on AuthException catch (e) {
       if (mounted) _showError(e.message);
     } catch (_) {
@@ -136,6 +181,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         width: 120,
                         height: 120,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 120,
+                          height: 120,
+                          decoration: const BoxDecoration(
+                            color: AppColors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(LucideIcons.wrench, color: Colors.white, size: 48),
+                        ),
                       ),
                     ),
                   ),
@@ -218,15 +272,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     onPressed: _loading ? null : _guest,
                     icon: const Icon(LucideIcons.user, size: 18),
                     label: Text(s.t('continue_guest')),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: () => context.push('/admin/login'),
-                    icon: const Icon(LucideIcons.shieldCheck, size: 16, color: AppColors.textMutedDark),
-                    label: const Text(
-                      'Aksè Panèl Admin',
-                      style: TextStyle(fontSize: 12, color: AppColors.textMutedDark),
-                    ),
                   ),
                 ],
               ),

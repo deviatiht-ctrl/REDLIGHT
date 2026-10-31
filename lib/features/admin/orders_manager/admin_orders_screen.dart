@@ -11,6 +11,7 @@ import '../../../models/app_order.dart';
 import '../../../providers/admin_providers.dart';
 import '../../../providers/core_providers.dart';
 import '../../../providers/locale_provider.dart';
+import 'tracking_editor.dart';
 
 class AdminOrdersScreen extends ConsumerWidget {
   const AdminOrdersScreen({super.key});
@@ -234,6 +235,20 @@ class _AdminOrderCard extends ConsumerWidget {
                 color: AppColors.textMutedLight,
               ),
             ),
+            if (order.status != 'cancelled')
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () =>
+                      TrackingEditorDialog.open(context, order),
+                  icon: const Icon(LucideIcons.truck, size: 15),
+                  label: Text(s.t('manage_tracking')),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

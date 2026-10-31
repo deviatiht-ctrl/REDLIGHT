@@ -1,4 +1,4 @@
-# Redlight Automotive
+# Redlight Autoparts
 
 App e-commerce pyès machin pou mache Ayisyen — **Flutter** (app kliyan mobile + panel admin web) ak **Supabase** (auth, Postgres, storage).
 

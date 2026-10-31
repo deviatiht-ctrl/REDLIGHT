@@ -45,7 +45,9 @@ final currentUserProvider = Provider<User?>((ref) {
 
 /// True si itilizatè konekte a nan tab `admin_users`.
 final isAdminProvider = FutureProvider<bool>((ref) async {
-  if (ref.watch(currentUserProvider) == null) return false;
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return false;
+  if (AuthService.isKnownAdminEmail(user.email)) return true;
   try {
     return await ref.watch(authServiceProvider).isAdmin();
   } catch (_) {

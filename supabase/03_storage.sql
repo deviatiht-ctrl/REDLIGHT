@@ -1,5 +1,5 @@
 -- ============================================================
--- REDLIGHT AUTOMOTIVE — 03_storage.sql
+-- REDLIGHT AUTOPARTS — 03_storage.sql
 -- Bucket 'product-images': lekti piblik, ekriti sèlman admin.
 -- Egzekite APRE 02_rls.sql (is_admin() dwe egziste deja).
 -- ============================================================

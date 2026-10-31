@@ -3,7 +3,7 @@ import '../theme/colors.dart';
 
 /// Konstan global yo.
 abstract final class AppConstants {
-  static const appName = 'Redlight Automotive';
+  static const appName = 'Redlight Autoparts';
   static const poweredBy = 'Powered by Cvisual';
   static const currency = 'HTG';
   static const storageBucket = 'product-images';

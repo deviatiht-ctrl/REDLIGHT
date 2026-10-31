@@ -1,4 +1,4 @@
-package com.cvisual.redlight_automotive
+package com.cvisual.redlight_autoparts
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -134,11 +134,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
               slivers: [
                 // Galeri imaj
                 SliverToBoxAdapter(
-                  child: SizedBox(
+                  child: Container(
                     height: 380,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF14171E)
+                          : const Color(0xFFF9FAFB),
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
+                      boxShadow: AppShadows.subtle(Theme.of(context).brightness == Brightness.dark),
+                    ),
+                    clipBehavior: Clip.antiAlias,
                     child: product.images.isEmpty
                         ? Container(
-                            color: Theme.of(context).colorScheme.surface,
                             alignment: Alignment.center,
                             child: const Icon(
                               LucideIcons.package,
@@ -152,18 +159,20 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                 itemCount: product.images.length,
                                 onPageChanged: (i) =>
                                     setState(() => _imageIndex = i),
-                                itemBuilder: (_, i) => CachedNetworkImage(
-                                  imageUrl: product.images[i],
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, _) =>
-                                      const ShimmerBox(radius: 0),
-                                  errorWidget: (_, _, _) => Container(
-                                    color: Theme.of(context).colorScheme.surface,
-                                    alignment: Alignment.center,
-                                    child: const Icon(
-                                      LucideIcons.package,
-                                      size: 80,
-                                      color: AppColors.textMutedDark,
+                                itemBuilder: (_, i) => Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: CachedNetworkImage(
+                                    imageUrl: product.images[i],
+                                    fit: BoxFit.contain,
+                                    placeholder: (_, _) =>
+                                        const ShimmerBox(radius: 0),
+                                    errorWidget: (_, _, _) => Container(
+                                      alignment: Alignment.center,
+                                      child: const Icon(
+                                        LucideIcons.package,
+                                        size: 80,
+                                        color: AppColors.textMutedDark,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -271,15 +280,21 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                               for (final model in product.compatibleModels)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
+                                    horizontal: 14,
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF1B1E26)
+                                        : Colors.white,
                                     borderRadius: BorderRadius.circular(999),
                                     border: Border.all(
-                                      color: Theme.of(context).colorScheme.outline,
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? const Color(0xFF2C3240)
+                                          : const Color(0xFFE5E7EB),
+                                      width: 1.2,
                                     ),
+                                    boxShadow: AppShadows.subtle(Theme.of(context).brightness == Brightness.dark),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -292,7 +307,7 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                                       const SizedBox(width: 6),
                                       Text(
                                         model,
-                                        style: const TextStyle(fontSize: 12),
+                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                                       ),
                                     ],
                                   ),
@@ -311,12 +326,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          Text(
-                            product.description!,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: AppColors.textMutedDark,
-                              height: 1.6,
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? const Color(0xFF1B1E26)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF2C3240)
+                                    : const Color(0xFFE5E7EB),
+                                width: 1.2,
+                              ),
+                              boxShadow: AppShadows.subtle(Theme.of(context).brightness == Brightness.dark),
+                            ),
+                            child: Text(
+                              product.description!,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFCBD5E1)
+                                    : const Color(0xFF4B5563),
+                                height: 1.6,
+                              ),
                             ),
                           ),
                         ],

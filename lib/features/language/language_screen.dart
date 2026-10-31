@@ -70,9 +70,9 @@ class LanguageScreen extends ConsumerWidget {
                   child: LanguageTile(
                     name: name,
                     selected: locale.languageCode == code,
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.selectionClick();
-                      ref.read(localeProvider.notifier).setLocale(code);
+                      await ref.read(localeProvider.notifier).setLocale(code);
                     },
                   ),
                 ),
@@ -80,7 +80,10 @@ class LanguageScreen extends ConsumerWidget {
               PrimaryButton(
                 label: s.t('continue'),
                 icon: LucideIcons.chevronRight,
-                onPressed: () => context.go('/onboarding'),
+                onPressed: () async {
+                  await ref.read(localeProvider.notifier).setLocale(locale.languageCode);
+                  if (context.mounted) context.go('/onboarding');
+                },
               ),
               const SizedBox(height: 24),
             ],

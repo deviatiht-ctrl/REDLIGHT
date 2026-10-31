@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -71,17 +74,27 @@ class AdminCategoriesScreen extends ConsumerWidget {
                           itemBuilder: (_, i) {
                             final cat = list[i];
                             return ListTile(
-                              leading: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
+                              leading: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  width: 48,
+                                  height: 48,
                                   color: AppColors.red.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  lucideIcon(cat.icon),
-                                  size: 20,
-                                  color: AppColors.red,
+                                  child: cat.imageUrl != null && cat.imageUrl!.isNotEmpty
+                                      ? CachedNetworkImage(
+                                          imageUrl: cat.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, _, _) => Icon(
+                                            lucideIcon(cat.icon),
+                                            size: 22,
+                                            color: AppColors.red,
+                                          ),
+                                        )
+                                      : Icon(
+                                          lucideIcon(cat.icon),
+                                          size: 22,
+                                          color: AppColors.red,
+                                        ),
                                 ),
                               ),
                               title: Text(
@@ -181,20 +194,52 @@ class _CategoryFormDialog extends ConsumerStatefulWidget {
 class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _name;
+  late final TextEditingController _imageUrl;
   String? _icon;
   bool _saving = false;
+  bool _uploading = false;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.category?.name ?? '');
+    _imageUrl = TextEditingController(text: widget.category?.imageUrl ?? '');
     _icon = widget.category?.icon;
   }
 
   @override
   void dispose() {
     _name.dispose();
+    _imageUrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1600,
+    );
+    if (file == null) return;
+    setState(() => _uploading = true);
+    try {
+      final Uint8List bytes = await file.readAsBytes();
+      final ext = file.name.contains('.') ? file.name.split('.').last : 'jpeg';
+      final url = await ref.read(productServiceProvider).uploadCategoryImage(bytes, ext);
+      if (mounted) {
+        setState(() {
+          _imageUrl.text = url;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ref.read(stringsProvider).t('upload_failed'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
   }
 
   Future<void> _save() async {
@@ -202,11 +247,17 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
     setState(() => _saving = true);
     try {
       final service = ref.read(productServiceProvider);
+      final img = _imageUrl.text.trim().isEmpty ? null : _imageUrl.text.trim();
       if (widget.category == null) {
-        await service.createCategory(_name.text.trim(), _icon);
+        await service.createCategory(_name.text.trim(), _icon, imageUrl: img);
       } else {
         await service.updateCategory(
-          Category(id: widget.category!.id, name: _name.text.trim(), icon: _icon),
+          Category(
+            id: widget.category!.id,
+            name: _name.text.trim(),
+            icon: _icon,
+            imageUrl: img,
+          ),
         );
       }
       ref.invalidate(categoriesProvider);
@@ -230,7 +281,7 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
     final s = ref.watch(stringsProvider);
     return Dialog(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Form(
@@ -246,15 +297,92 @@ class _CategoryFormDialogState extends ConsumerState<_CategoryFormDialog> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                // Live preview of category card
+                Container(
+                  height: 76,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.borderLight),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 90,
+                        height: double.infinity,
+                        child: _imageUrl.text.isNotEmpty
+                            ? CachedNetworkImage(
+                                imageUrl: _imageUrl.text,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, _, _) => Icon(
+                                  lucideIcon(_icon),
+                                  color: AppColors.red,
+                                ),
+                              )
+                            : Container(
+                                color: AppColors.red.withValues(alpha: 0.08),
+                                child: Icon(
+                                  lucideIcon(_icon),
+                                  color: AppColors.red,
+                                  size: 24,
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          _name.text.isEmpty ? 'Nom de la catégorie' : _name.text,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                      ),
+                      const Icon(LucideIcons.chevronRight, size: 18, color: Colors.grey),
+                      const SizedBox(width: 12),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _name,
                   validator: (v) => (v == null || v.trim().isEmpty)
                       ? s.t('name_required')
                       : null,
                   decoration: InputDecoration(hintText: s.t('category_name')),
+                  onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _imageUrl,
+                  decoration: InputDecoration(
+                    labelText: 'Foto Kategori (Image URL)',
+                    hintText: 'https://...',
+                    suffixIcon: IconButton(
+                      icon: _uploading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(LucideIcons.uploadCloud, size: 20),
+                      onPressed: _uploading ? null : _pickImage,
+                      tooltip: 'Chwazi foto nan galeri',
+                    ),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _icon,
                   hint: Text(s.t('icon')),

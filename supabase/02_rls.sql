@@ -1,5 +1,5 @@
 -- ============================================================
--- REDLIGHT AUTOMOTIVE — 02_rls.sql
+-- REDLIGHT AUTOPARTS — 02_rls.sql
 -- Row Level Security + fonksyon is_admin() + place_order().
 -- Egzekite APRE 01_schema.sql.
 -- ============================================================

@@ -80,6 +80,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
     final recentSearches = ref.watch(recentSearchesProvider);
     final s = ref.watch(stringsProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasActiveFilter = filter.brand != null ||
+        filter.minPrice != null ||
+        filter.maxPrice != null ||
+        filter.sort != 'newest';
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -91,23 +97,38 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: _onSearchChanged,
-                          onSubmitted: _commitSearch,
-                          textInputAction: TextInputAction.search,
-                          decoration: InputDecoration(
-                            hintText: s.t('search_hint'),
-                            prefixIcon: const Icon(LucideIcons.search, size: 20),
-                            suffixIcon: filter.query.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(LucideIcons.x, size: 18),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _onSearchChanged('');
-                                    },
-                                  )
-                                : null,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB),
+                              width: 1.2,
+                            ),
+                            boxShadow: AppShadows.subtle(isDark),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: _onSearchChanged,
+                            onSubmitted: _commitSearch,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              hintText: s.t('search_hint'),
+                              prefixIcon: const Icon(LucideIcons.search, size: 20),
+                              suffixIcon: filter.query.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(LucideIcons.x, size: 18),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _onSearchChanged('');
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            ),
                           ),
                         ),
                       ),
@@ -118,13 +139,36 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> {
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                            color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB),
+                              width: 1.2,
+                            ),
+                            boxShadow: AppShadows.subtle(isDark),
                           ),
-                          child: const Icon(
-                            LucideIcons.slidersHorizontal,
-                            size: 22,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Icon(
+                                LucideIcons.slidersHorizontal,
+                                size: 20,
+                                color: isDark ? Colors.white : const Color(0xFF1F2937),
+                              ),
+                              if (hasActiveFilter)
+                                Positioned(
+                                  top: 10,
+                                  right: 10,
+                                  child: Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),

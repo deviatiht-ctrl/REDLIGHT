@@ -44,11 +44,49 @@ class AuthService {
     await _client.auth.updateUser(UserAttributes(password: password));
   }
 
-  Future<void> signOut() => _client.auth.signOut();
+  Future<void> signOut() async {
+    try {
+      await _client.auth.signOut().timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
 
-  /// Verifye si itilizatè konekte a se yon admin (fonksyon SQL is_admin()).
+  static bool isKnownAdminEmail(String? email) {
+    if (email == null) return false;
+    final clean = email.toLowerCase().trim();
+    return clean == 'laurorejeanclarens0@gmail.com' || clean == 'admin@redlight.ht';
+  }
+
+  /// Verifye si itilizatè konekte a se yon admin (fonksyon SQL is_admin() + verifikasyon imel).
   Future<bool> isAdmin() async {
-    final result = await _client.rpc('is_admin');
-    return result == true;
+    final user = _client.auth.currentUser;
+    if (user == null) return false;
+
+    final email = user.email?.toLowerCase().trim();
+    if (email != null && isKnownAdminEmail(email)) {
+      return true;
+    }
+
+    if (user.appMetadata['role'] == 'admin' || user.appMetadata['is_admin'] == true) {
+      return true;
+    }
+
+    try {
+      final result = await _client.rpc('is_admin').timeout(const Duration(seconds: 4));
+      if (result == true) return true;
+    } catch (_) {}
+
+    if (email != null) {
+      try {
+        final res = await _client
+            .from('admin_users')
+            .select('email')
+            .ilike('email', email)
+            .maybeSingle()
+            .timeout(const Duration(seconds: 4));
+        if (res != null) return true;
+      } catch (_) {}
+    }
+
+    return false;
   }
 }

@@ -17,6 +17,7 @@ class AdminShell extends ConsumerWidget {
 
   static const _items = [
     (LucideIcons.layoutDashboard, 'dashboard', '/admin'),
+    (LucideIcons.sparkles, 'admin_offers', '/admin/offers'),
     (LucideIcons.package, 'products', '/admin/products'),
     (LucideIcons.tag, 'categories', '/admin/categories'),
     (LucideIcons.receipt, 'orders', '/admin/orders'),
@@ -55,7 +56,7 @@ class AdminShell extends ConsumerWidget {
       actionLabel: s.t('sign_out'),
       onAction: () async {
         await ref.read(authServiceProvider).signOut();
-        if (context.mounted) context.go('/admin/login');
+        if (context.mounted) context.go('/auth');
       },
     );
   }
@@ -130,7 +131,7 @@ class _AdminSidebar extends ConsumerWidget {
                   selected: false,
                   onTap: () async {
                     await ref.read(authServiceProvider).signOut();
-                    if (context.mounted) context.go('/admin/login');
+                    if (context.mounted) context.go('/auth');
                   },
                 ),
               ],

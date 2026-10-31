@@ -7,8 +7,10 @@ Ordre obligatoire dans Supabase Dashboard → SQL Editor :
 3. `03_storage.sql`
 4. `04_admin.sql` — remplacer `EMAIL_ADMIN_LA@example.com` avant exécution
 5. `06_commerce.sql`
-6. `05_seed.sql` seulement pour un environnement de démonstration séparé
-7. `07_delete_demo.sql` pour masquer/supprimer les données de démonstration
+6. `08_tracking.sql` — suivi colis (position, ETA, historique géré par l'admin)
+6b. `10_payment_verification.sql` — vérification des paiements sans blocage `PAYMENT_MISMATCH` (à exécuter **avant** de redéployer `commerce`)
+7. `05_seed.sql` seulement pour un environnement de démonstration séparé
+8. `07_delete_demo.sql` pour masquer/supprimer les données de démonstration
 
 Après `06_commerce.sql`, `is_demo = false` devient la valeur par défaut et le catalogue public n’affiche que les produits réels.
 
@@ -39,6 +41,7 @@ supabase functions deploy commerce --no-verify-jwt
 | `PLOP_CLIENT_SECRET` | Signature HMAC webhook/retrait |
 | `APP_ORIGINS` | Origines HTTPS séparées par virgule, ex. `https://admin.exemple.ht` |
 | `PLOP_WITHDRAWALS_ENABLED` | `true` seulement après revue et essais validés |
+| `PLOP_RECONCILE_SECRET` | Long secret aléatoire ; protège l’action `payment.reconcile` appelée par pg_cron |
 
 Ne jamais mettre `PLOP_CLIENT_ID` ou `PLOP_CLIENT_SECRET` dans `.env` du client Flutter.
 
@@ -71,6 +74,12 @@ Android utilise déjà `redlight://auth/callback` ; iOS déclare le scheme `redl
 ## Réconciliation
 
 Une notification webhook peut échouer. L’écran paiement vérifie périodiquement via `paiement-verify`. Ne pas faire confiance à une URL de retour ou à un bouton “j’ai payé” : seul `paiement-verify` (ou le webhook signé) peut confirmer.
+
+- La référence `PAY-<order_id>` est la clé. `provider_transaction_id` garde l’ID reçu au démarrage (`paiement-marchand`), `transaction_id` l’ID renvoyé par `paiement-verify` ; un ID différent ne bloque plus le paiement.
+- Chaque vérification (client, webhook, cron, admin) est enregistrée dans `payment_checks` (statut, ID, montant, erreur, réponse brute).
+- Montant différent ou ID déjà utilisé par une autre commande → paiement en `review` (pas d’erreur), à contrôler par l’admin.
+- Vérification automatique : activer le bloc pg_cron en bas de `10_payment_verification.sql` (toutes les 5 min, paiements `pending` des 3 derniers jours).
+- Un admin peut appeler `payment.verify` sur n’importe quelle commande.
 
 ## Tests recommandés avant production
 

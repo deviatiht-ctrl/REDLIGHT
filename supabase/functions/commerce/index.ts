@@ -30,6 +30,38 @@ export function withdrawalPayload(amount: number, method: string, recipient: str
   return [amount, method, recipient, reference, timestamp].join('|');
 }
 
+type CheckSource = 'client' | 'webhook' | 'cron' | 'start' | 'admin';
+const paidStatuses = ['ok', 'success', 'successful', 'paid', 'completed', 'complete'];
+
+export function parseAmount(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  let text = String(value).replace(/htg|gdes?/gi, '').replace(/\s/g, '');
+  text = /^\d+,\d{1,2}$/.test(text) ? text.replace(',', '.') : text.replace(/,/g, '');
+  const amount = typeof value === 'number' ? value : Number(text);
+  return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : null;
+}
+
+// Repons paiement-verify -> valè nòmalize. Referans PAY-<order> lan se kle a;
+// id_transaction ka diferan de transaction_id paiement-marchand te bay.
+export function normalizeVerification(verified: Data) {
+  const status = String(verified.trans_status ?? '').trim().toLowerCase();
+  const transaction = verified.id_transaction ?? verified.transaction_id;
+  return {
+    status,
+    paid: paidStatuses.includes(status),
+    transaction: transaction == null || String(transaction).trim() === '' ? null : String(transaction).trim(),
+    amount: parseAmount(verified.montant ?? verified.amount),
+    method: verified.method == null ? null : String(verified.method).trim().toLowerCase(),
+  };
+}
+
+export function sameSecret(given: string, expected: string): boolean {
+  const a = encoder.encode(given), b = encoder.encode(expected);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < b.length; i++) diff |= (a[i] ?? 0) ^ b[i];
+  return diff === 0;
+}
+
 export function paymentUrl(value: unknown): string | null {
   if (value == null) return null;
   if (typeof value !== 'string') throw new ApiError('INVALID_PROVIDER_RESPONSE', 502);
@@ -95,16 +127,46 @@ async function ownedOrder(id: unknown, user: Data): Promise<Data> {
   return rows[0];
 }
 
-async function verifyPayment(payment: Data): Promise<Data> {
-  const verified = await provider('api/paiement-verify', {
-    client_id: secret('PLOP_CLIENT_ID'), refference_id: payment.reference,
-  });
-  const methods = ['moncash', 'moncash_ussd', 'natcash', 'kashpaw', 'carte'];
-  if (!['ok', 'no'].includes(verified.trans_status) || !verified.id_transaction || Number(verified.montant) !== Number(payment.amount) || (payment.transaction_id && String(verified.id_transaction) !== payment.transaction_id) || (verified.method != null && !methods.includes(verified.method))) throw new ApiError('PAYMENT_MISMATCH', 409);
+async function recordFailedCheck(payment: Data, source: CheckSource, code: string): Promise<void> {
+  try {
+    await database('payment_checks', 'POST', { order_id: payment.order_id, reference: payment.reference, source, result: 'error', error: code });
+    await database(`payments?order_id=eq.${payment.order_id}`, 'PATCH', { last_error: code, last_verified_at: new Date().toISOString(), verify_attempts: Number(payment.verify_attempts ?? 0) + 1 });
+  } catch { /* pa kache erè orijinal la */ }
+}
+
+// Pa janm voye PAYMENT_MISMATCH: chak rezilta (menm montan ki pa koresponn)
+// anrejistre nan payments + payment_checks; apply_payment mete 'review' si gen pwoblèm.
+async function verifyPayment(payment: Data, source: CheckSource = 'client'): Promise<Data> {
+  let verified: Data;
+  try {
+    verified = await provider('api/paiement-verify', {
+      client_id: secret('PLOP_CLIENT_ID'), refference_id: payment.reference,
+    });
+  } catch (error) {
+    await recordFailedCheck(payment, source, error instanceof ApiError ? error.code : 'PROVIDER_OUTCOME_UNKNOWN');
+    throw error;
+  }
+  const result = normalizeVerification(verified);
   await database('rpc/apply_payment', 'POST', {
-    p_reference: payment.reference, p_transaction: String(verified.id_transaction), p_amount: Number(verified.montant), p_paid: verified.trans_status === 'ok',
+    p_reference: payment.reference, p_transaction: result.transaction, p_amount: result.amount, p_paid: result.paid,
+    p_provider_status: result.status || null, p_method: result.method, p_source: source, p_raw: verified,
   });
   return (await database(`payments?order_id=eq.${payment.order_id}&select=*`))[0];
+}
+
+// Rele pa pg_cron (gade 10_payment_verification.sql) pou verifye peman ki an atant.
+async function reconcilePayments(days = 3): Promise<Data> {
+  const since = new Date(Date.now() - Math.min(Math.max(Math.trunc(days) || 3, 1), 60) * 86400000).toISOString();
+  const stale = new Date(Date.now() - 60000).toISOString();
+  const rows = await database(`payments?select=*&created_at=gte.${since}&and=(or(status.eq.pending,and(status.eq.creating,verify_attempts.lt.10)),or(last_verified_at.is.null,last_verified_at.lt."${stale}"))&order=created_at.asc&limit=25`);
+  const summary = { checked: 0, paid: 0, errors: 0 };
+  for (const row of rows) {
+    summary.checked++;
+    try {
+      if ((await verifyPayment(row, 'cron'))?.status === 'paid') summary.paid++;
+    } catch { summary.errors++; }
+  }
+  return summary;
 }
 
 async function merchantToken(): Promise<string> {
@@ -121,17 +183,32 @@ async function processRequest(request: Request, data: Data, raw: string): Promis
     if (typeof reference !== 'string' || !/^PAY-[0-9a-f-]{36}$/i.test(reference)) throw new ApiError('INVALID_REFERENCE');
     const payments = await database(`payments?reference=eq.${encodeURIComponent(reference)}&select=*`);
     if (!payments.length) throw new ApiError('PAYMENT_NOT_FOUND', 404);
-    await verifyPayment(payments[0]);
+    await verifyPayment(payments[0], 'webhook');
     return { received: true };
+  }
+
+  if (data.action === 'payment.reconcile') {
+    if (!sameSecret(request.headers.get('X-Reconcile-Secret') ?? '', secret('PLOP_RECONCILE_SECRET'))) throw new ApiError('AUTHENTICATION_REQUIRED', 401);
+    return await reconcilePayments(Number(data.days));
   }
 
   const { user, jwt } = await authenticate(request);
   if (data.action === 'payment.start' || data.action === 'payment.verify') {
-    const order = await ownedOrder(data.order_id, user);
+    let order: Data;
+    let source: CheckSource = 'client';
+    try { order = await ownedOrder(data.order_id, user); }
+    catch (error) {
+      // Admin ka verifye peman nenpòt kòmand.
+      if (data.action !== 'payment.verify' || !(error instanceof ApiError) || error.code !== 'ORDER_NOT_FOUND' || !await database('rpc/is_admin', 'POST', {}, jwt)) throw error;
+      const rows = await database(`orders?id=eq.${uuid(data.order_id)}&select=*`);
+      if (!rows.length) throw new ApiError('ORDER_NOT_FOUND', 404);
+      order = rows[0];
+      source = 'admin';
+    }
     const payments = await database(`payments?order_id=eq.${order.id}&select=*`);
     if (data.action === 'payment.verify') {
       if (!payments.length) throw new ApiError('PAYMENT_NOT_FOUND', 404);
-      return await verifyPayment(payments[0]);
+      return await verifyPayment(payments[0], source);
     }
     if (payments.length) {
       const existing = payments[0];
@@ -140,7 +217,7 @@ async function processRequest(request: Request, data: Data, raw: string): Promis
       // Verifye anvan: si founisè a pa jwenn referans lan (404 / status:false /
       // paramètre invalide), efase liy 'creating' la epi rekòmanse. Erè rezo
       // (OUTCOME_UNKNOWN) pa jere isit — li pwopaje pou itilizatè a eseye ankò.
-      try { return await verifyPayment(existing); }
+      try { return await verifyPayment(existing, 'start'); }
       catch (error) {
         const notFound = error instanceof ApiError && ['PROVIDER_HTTP_400', 'PROVIDER_HTTP_404', 'PROVIDER_HTTP_502'].includes(error.code);
         if (!notFound) throw error;
@@ -165,7 +242,7 @@ async function processRequest(request: Request, data: Data, raw: string): Promis
     } catch (error) {
       // Si referans lan deja egziste bò founisè a (repons pèdi), verifye li olye.
       if (error instanceof ApiError && ['PROVIDER_HTTP_404', 'DUPLICATE_REFERENCE'].includes(error.code)) {
-        return await verifyPayment((await database(`payments?order_id=eq.${order.id}&select=*`))[0]);
+        return await verifyPayment((await database(`payments?order_id=eq.${order.id}&select=*`))[0], 'start');
       }
       throw error;
     }
@@ -174,7 +251,7 @@ async function processRequest(request: Request, data: Data, raw: string): Promis
     if (order.payment_method !== 'moncash_ussd' && !url) throw new ApiError('PROVIDER_OUTCOME_UNKNOWN', 502);
     // Patch la a aplike sèlman si peman an toujou 'creating' — yon webhook ki gentan
     // make li 'paid'/'review' pa dwe ekrase.
-    const patched = await database(`payments?order_id=eq.${order.id}&status=eq.creating`, 'PATCH', { transaction_id: String(result.transaction_id), redirect_url: url, status: 'pending' });
+    const patched = await database(`payments?order_id=eq.${order.id}&status=eq.creating`, 'PATCH', { transaction_id: String(result.transaction_id), provider_transaction_id: String(result.transaction_id), redirect_url: url, status: 'pending' });
     const final = patched.length ? patched[0] : (await database(`payments?order_id=eq.${order.id}&select=*`))[0];
     if (!final || !['pending', 'paid', 'review'].includes(final.status)) throw new ApiError('PROVIDER_OUTCOME_UNKNOWN', 503);
     return final;
@@ -241,7 +318,7 @@ async function processRequest(request: Request, data: Data, raw: string): Promis
 export async function handler(request: Request): Promise<Response> {
   const origin = request.headers.get('Origin');
   const allowed = (Deno.env.get('APP_ORIGINS') ?? '').split(',').map(s => s.trim());
-  const headers: Record<string,string> = { 'Content-Type': 'application/json', Vary: 'Origin', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, x-webhook-signature', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+  const headers: Record<string,string> = { 'Content-Type': 'application/json', Vary: 'Origin', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info, x-webhook-signature, x-reconcile-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
   if (origin && allowed.includes(origin)) headers['Access-Control-Allow-Origin'] = origin;
   if (origin && !allowed.includes(origin)) return new Response(JSON.stringify({ error: 'ORIGIN_DENIED' }), { status: 403, headers });
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });

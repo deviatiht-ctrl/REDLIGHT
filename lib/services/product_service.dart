@@ -18,22 +18,64 @@ class ProductService {
     return data.map((e) => Category.fromJson(e)).toList();
   }
 
-  Future<Category> createCategory(String name, String? icon) async {
-    final data = await _client
-        .from('categories')
-        .insert({'name': name, 'icon': icon})
-        .select()
-        .single();
-    return Category.fromJson(data);
+  Future<Category> createCategory(String name, String? icon, {String? imageUrl}) async {
+    final payload = <String, dynamic>{
+      'name': name,
+      'icon': icon,
+      'image_url': ?imageUrl,
+    };
+    try {
+      final data = await _client
+          .from('categories')
+          .insert(payload)
+          .select()
+          .single();
+      return Category.fromJson(data);
+    } catch (_) {
+      payload.remove('image_url');
+      final data = await _client
+          .from('categories')
+          .insert(payload)
+          .select()
+          .single();
+      return Category.fromJson({...data, 'image_url': ?imageUrl});
+    }
   }
 
-  Future<void> updateCategory(Category category) => _client
-      .from('categories')
-      .update(category.toJson())
-      .eq('id', category.id);
+  Future<void> updateCategory(Category category) async {
+    try {
+      await _client
+          .from('categories')
+          .update(category.toJson())
+          .eq('id', category.id);
+    } catch (_) {
+      final fallbackPayload = {'name': category.name, 'icon': category.icon};
+      await _client
+          .from('categories')
+          .update(fallbackPayload)
+          .eq('id', category.id);
+    }
+  }
 
   Future<void> deleteCategory(String id) =>
       _client.from('categories').delete().eq('id', id);
+
+  /// Upload yon imaj pou kategori nan bucket `product-images`, retounen URL piblik la.
+  Future<String> uploadCategoryImage(Uint8List bytes, String extension) async {
+    final ext = extension.toLowerCase().replaceAll('jpg', 'jpeg');
+    final path = 'categories/${DateTime.now().millisecondsSinceEpoch}_${bytes.length}.$ext';
+    await _client.storage
+        .from(AppConstants.storageBucket)
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: 'image/$ext',
+            upsert: true,
+          ),
+        );
+    return _client.storage.from(AppConstants.storageBucket).getPublicUrl(path);
+  }
 
   // ---------- Pwodwi ----------
 

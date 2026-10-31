@@ -84,6 +84,15 @@ class _AdminLoginScreenState extends ConsumerState<AdminLoginScreen> {
                         width: 110,
                         height: 110,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 110,
+                          height: 110,
+                          decoration: const BoxDecoration(
+                            color: AppColors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(LucideIcons.shieldCheck, color: Colors.white, size: 44),
+                        ),
                       ),
                     ),
                   ),

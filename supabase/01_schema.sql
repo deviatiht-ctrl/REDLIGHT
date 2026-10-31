@@ -1,5 +1,5 @@
 -- ============================================================
--- REDLIGHT AUTOMOTIVE — 01_schema.sql
+-- REDLIGHT AUTOPARTS — 01_schema.sql
 -- Tables + triggers updated_at. Egzekite PREMYE nan Supabase SQL Editor.
 -- ============================================================
 
@@ -7,8 +7,10 @@ create table if not exists categories (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   icon text,               -- non icon Lucide (string) pou app la mapé li
+  image_url text,          -- URL imaj pou bèl kat orizontal rektangilè
   created_at timestamptz default now()
 );
+alter table categories add column if not exists image_url text;
 
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),

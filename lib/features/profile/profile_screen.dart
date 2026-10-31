@@ -12,6 +12,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../services/auth_service.dart';
 import '../language/language_screen.dart' show LanguageTile;
 
 class ProfileScreen extends ConsumerWidget {
@@ -39,9 +40,17 @@ class ProfileScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).colorScheme.outline),
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1B1E26)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF2C3240)
+                        : const Color(0xFFE5E7EB),
+                    width: 1.2,
+                  ),
+                  boxShadow: AppShadows.elevated(Theme.of(context).brightness == Brightness.dark),
                 ),
                 child: Column(
                   children: [
@@ -49,7 +58,9 @@ class ProfileScreen extends ConsumerWidget {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.outline,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF252932)
+                            : const Color(0xFFF3F4F6),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -87,12 +98,17 @@ class ProfileScreen extends ConsumerWidget {
               Builder(
                 builder: (context) {
                   final appUser = AppUser.fromSupabase(user);
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
                   return Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Theme.of(context).colorScheme.outline),
+                      color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB),
+                        width: 1.2,
+                      ),
+                      boxShadow: AppShadows.elevated(isDark),
                     ),
                     child: Row(
                       children: [
@@ -138,6 +154,15 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 20),
+              if (AuthService.isKnownAdminEmail(user.email) || (ref.watch(isAdminProvider).asData?.value ?? false)) ...[
+                _ProfileTile(
+                  icon: LucideIcons.shieldCheck,
+                  label: s.t('admin_panel'),
+                  color: AppColors.red,
+                  onTap: () => context.go('/admin'),
+                ),
+                const SizedBox(height: 10),
+              ],
               _ProfileTile(icon: LucideIcons.user, label: s.t('edit_profile'), onTap: () => context.push('/account/profile')),
               _ProfileTile(icon: LucideIcons.lock, label: s.t('change_password'), onTap: () => context.push('/account/password')),
               _ProfileTile(
@@ -279,43 +304,50 @@ class _ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 20, color: color ?? Theme.of(context).colorScheme.onSurface),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: color,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB),
+            width: 1.2,
+          ),
+          boxShadow: AppShadows.subtle(isDark),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              child: Row(
+                children: [
+                  Icon(icon, size: 20, color: color ?? (isDark ? Colors.white : Colors.black87)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: color ?? (isDark ? Colors.white : const Color(0xFF1F2937)),
+                      ),
                     ),
                   ),
-                ),
-                const Icon(
-                  LucideIcons.chevronRight,
-                  size: 18,
-                  color: AppColors.textMutedDark,
-                ),
-              ],
+                  const Icon(
+                    LucideIcons.chevronRight,
+                    size: 18,
+                    color: AppColors.textMutedDark,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

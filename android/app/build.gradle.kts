@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.cvisual.redlight_automotive"
+    namespace = "com.cvisual.redlight_autoparts"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +15,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.cvisual.redlight_automotive"
+        // Unique Application ID for Google Play Store.
+        applicationId = "com.cvisual.redlight_autoparts"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

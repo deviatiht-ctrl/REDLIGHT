@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -18,6 +19,7 @@ import 'features/checkout/payment_screen.dart';
 import 'features/admin/admin_shell.dart';
 import 'features/admin/categories_manager/admin_categories_screen.dart';
 import 'features/admin/dashboard/admin_dashboard_screen.dart';
+import 'features/admin/offers_manager/admin_offers_screen.dart';
 import 'features/admin/orders_manager/admin_orders_screen.dart';
 import 'features/admin/products_manager/admin_products_screen.dart';
 import 'features/auth/auth_screen.dart';
@@ -32,6 +34,7 @@ import 'features/product_detail/product_detail_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/shell/client_shell.dart';
 import 'providers/core_providers.dart';
+import 'services/auth_service.dart';
 import 'services/supabase_service.dart';
 import 'providers/theme_provider.dart';
 import 'features/profile/account_screen.dart';
@@ -59,6 +62,7 @@ class _AuthRefreshListenable extends ChangeNotifier {
 
 final routerProvider = Provider<GoRouter>((ref) {
   final store = ref.watch(localStoreProvider);
+  ref.watch(localeProvider);
   final refresh = _AuthRefreshListenable(
     SupabaseService.client.auth.onAuthStateChange,
   );
@@ -73,15 +77,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onboardingDone = store.onboardingDone;
       final user = SupabaseService.client.auth.currentUser;
       final loggedIn = user != null && !user.isAnonymous;
-      if (refresh.recovering && loggedIn && path != '/account/password') return '/account/password';
       if (path.startsWith('/legal/')) return null;
 
       // Zòn admin: login obligatwa (verifikasyon admin fèt nan AdminShell)
       // Pa pase nan onboarding oswa language picker si se nan admin itilizatè a prale
       if (path.startsWith('/admin')) {
+        refresh.recovering = false;
         if (path == '/admin/login') return loggedIn ? '/admin' : null;
         if (!loggedIn) return '/admin/login';
         return null;
+      }
+
+      if (refresh.recovering && loggedIn && path != '/account/password') {
+        refresh.recovering = false;
+        return '/account/password';
       }
 
       // Sou Web, pa fòse onboarding oswa seleksyon lang mobil
@@ -109,7 +118,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Deja konekte: pa bezwen wè paj auth la
       if (loggedIn && path == '/auth') {
         final target = state.uri.queryParameters['redirect'];
-        return target != null && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/auth') ? target : '/';
+        if (target != null && target.startsWith('/') && !target.startsWith('//') && !target.startsWith('/auth')) {
+          return target;
+        }
+        final email = user.email?.toLowerCase().trim();
+        if (AuthService.isKnownAdminEmail(email) ||
+            user.appMetadata['role'] == 'admin' ||
+            user.appMetadata['is_admin'] == true ||
+            ref.read(isAdminProvider).asData?.value == true) {
+          return '/admin';
+        }
+        return '/';
       }
 
       return null;
@@ -148,6 +167,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/admin',
             builder: (context, state) => const AdminDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/admin/offers',
+            builder: (context, state) => const AdminOffersScreen(),
           ),
           GoRoute(
             path: '/admin/products',
@@ -235,6 +258,55 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+/// Delege lokalizasyon pou Kreyòl ayisyen ('ht')
+/// Flutter pa gen sipò natif pou 'ht' nan GlobalMaterialLocalizations,
+/// sa ki te konn lakòz MaterialLocalizations.of(context) retounen null
+/// epi fè TextField kraze (ekran gri sou Android/tablet).
+class _HtMaterialLocalizationsDelegate
+    extends LocalizationsDelegate<MaterialLocalizations> {
+  const _HtMaterialLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'ht';
+
+  @override
+  Future<MaterialLocalizations> load(Locale locale) =>
+      GlobalMaterialLocalizations.delegate.load(const Locale('fr'));
+
+  @override
+  bool shouldReload(_HtMaterialLocalizationsDelegate old) => false;
+}
+
+class _HtCupertinoLocalizationsDelegate
+    extends LocalizationsDelegate<CupertinoLocalizations> {
+  const _HtCupertinoLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'ht';
+
+  @override
+  Future<CupertinoLocalizations> load(Locale locale) =>
+      GlobalCupertinoLocalizations.delegate.load(const Locale('fr'));
+
+  @override
+  bool shouldReload(_HtCupertinoLocalizationsDelegate old) => false;
+}
+
+class _HtWidgetsLocalizationsDelegate
+    extends LocalizationsDelegate<WidgetsLocalizations> {
+  const _HtWidgetsLocalizationsDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'ht';
+
+  @override
+  Future<WidgetsLocalizations> load(Locale locale) =>
+      GlobalWidgetsLocalizations.delegate.load(const Locale('fr'));
+
+  @override
+  bool shouldReload(_HtWidgetsLocalizationsDelegate old) => false;
+}
+
 class RedlightApp extends ConsumerWidget {
   const RedlightApp({super.key});
 
@@ -244,8 +316,9 @@ class RedlightApp extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
 
-    // intl swiv lang app la (dat, non mwa, elatriye)
-    Intl.defaultLocale = locale.toLanguageTag();
+    // intl swiv lang app la (dat, non mwa, elatriye; tonbe sou fr pou ht)
+    Intl.defaultLocale =
+        locale.languageCode == 'ht' ? 'fr' : locale.toLanguageTag();
 
     // Tèm sombre pou app kliyan, tèm clè pou /admin.
     return ListenableBuilder(
@@ -263,10 +336,36 @@ class RedlightApp extends ConsumerWidget {
           locale: locale,
           supportedLocales: supportedLocales,
           localizationsDelegates: const [
+            _HtMaterialLocalizationsDelegate(),
+            _HtCupertinoLocalizationsDelegate(),
+            _HtWidgetsLocalizationsDelegate(),
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: (context, child) {
+            // Anpeche ekran gri nan release si yon widget rankontre yon ti erè
+            ErrorWidget.builder = (FlutterErrorDetails details) {
+              return Material(
+                color: Colors.transparent,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Erè nan afichaj la. Tanpri relanse paj la.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            };
+            return child ?? const SizedBox.shrink();
+          },
         );
       },
     );

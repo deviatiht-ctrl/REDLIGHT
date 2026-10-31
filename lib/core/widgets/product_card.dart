@@ -23,98 +23,123 @@ class ProductCard extends ConsumerWidget {
     final isFavorite = ref.watch(
       favoritesProvider.select((s) => s.contains(product.id)),
     );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1B1E26) : Colors.white;
+    final borderColor = isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB);
 
     return SizedBox(
       width: width,
-      child: Material(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor, width: 1.2),
+          boxShadow: AppShadows.elevated(isDark),
+        ),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => context.push('/product/${product.id}'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AspectRatio(
-                aspectRatio: 1,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (product.imageUrl != null)
-                      CachedNetworkImage(
-                        imageUrl: product.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, _) =>
-                            const ShimmerBox(radius: 0),
-                        errorWidget: (_, _, _) => const _ImageFallback(),
-                      )
-                    else
-                      const _ImageFallback(),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          ref
-                              .read(favoritesProvider.notifier)
-                              .toggle(product.id);
-                        },
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.55),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            LucideIcons.heart,
-                            size: 18,
-                            color: isFavorite
-                                ? AppColors.red
-                                : Colors.white,
-                          ),
-                        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.push('/product/${product.id}'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AspectRatio(
+                  aspectRatio: 1.05,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Container(
+                        color: isDark ? const Color(0xFF14171E) : const Color(0xFFF9FAFB),
+                        padding: const EdgeInsets.all(8),
+                        child: product.imageUrl != null
+                            ? CachedNetworkImage(
+                                imageUrl: product.imageUrl!,
+                                fit: BoxFit.contain,
+                                placeholder: (_, _) =>
+                                    const ShimmerBox(radius: 0),
+                                errorWidget: (_, _, _) => const _ImageFallback(),
+                              )
+                            : const _ImageFallback(),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        height: 1.25,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            formatPrice(product.price),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.red,
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            ref
+                                .read(favoritesProvider.notifier)
+                                .toggle(product.id);
+                          },
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0x99000000) : const Color(0xB3FFFFFF),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? Colors.white24 : Colors.black12,
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              LucideIcons.heart,
+                              size: 17,
+                              color: isFavorite
+                                  ? AppColors.red
+                                  : (isDark ? Colors.white : Colors.black87),
                             ),
                           ),
                         ),
-                        StockBadge(stock: product.stock, compact: true),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : const Color(0xFF111827),
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              formatPrice(product.price),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.red,
+                              ),
+                            ),
+                          ),
+                          StockBadge(stock: product.stock, compact: true),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

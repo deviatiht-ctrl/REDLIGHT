@@ -1,11 +1,11 @@
 {
-    "name": "redlight_automotive",
-    "short_name": "redlight_automotive",
+    "name": "Redlight Autoparts",
+    "short_name": "Redlight Autoparts",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0A0A0A",
     "theme_color": "#E10600",
-    "description": "A new Flutter project.",
+    "description": "Redlight Autoparts — e-commerce pyès machin pou mache Ayisyen.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

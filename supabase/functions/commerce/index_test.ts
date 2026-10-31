@@ -1,4 +1,4 @@
-import { hmac, validSignature, withdrawalPayload, paymentUrl, handler } from './index.ts';
+import { hmac, validSignature, withdrawalPayload, paymentUrl, handler, parseAmount, normalizeVerification, sameSecret } from './index.ts';
 
 function assert(value: unknown): asserts value {
   if (!value) throw new Error('Assertion failed');
@@ -29,6 +29,31 @@ Deno.test('Payment URLs reject executable and insecure schemes', () => {
     try { paymentUrl(value); } catch { rejected = true; }
     assert(rejected);
   }
+});
+
+Deno.test('Payment amounts are parsed to cents from provider formats', () => {
+  assert(parseAmount(1500) === 1500);
+  assert(parseAmount('1500.00') === 1500);
+  assert(parseAmount('1,500.50') === 1500.5);
+  assert(parseAmount('1500,5') === 1500.5);
+  assert(parseAmount('1 500 HTG') === 1500);
+  assert(parseAmount(null) === null);
+  assert(parseAmount('abc') === null);
+});
+
+Deno.test('Verification is normalized without rejecting a different transaction id', () => {
+  const paid = normalizeVerification({ trans_status: 'OK', id_transaction: 12345, montant: '500.00', method: 'MonCash' });
+  assert(paid.paid && paid.status === 'ok' && paid.transaction === '12345' && paid.amount === 500 && paid.method === 'moncash');
+  const pending = normalizeVerification({ trans_status: 'no', montant: '500' });
+  assert(!pending.paid && pending.transaction === null);
+  assert(!normalizeVerification({ trans_status: 'failed' }).paid);
+  assert(!normalizeVerification({}).paid);
+});
+
+Deno.test('Reconcile secret comparison', () => {
+  assert(sameSecret('abc123', 'abc123'));
+  assert(!sameSecret('abc12', 'abc123'));
+  assert(!sameSecret('', 'abc123'));
 });
 
 Deno.test('Public entry point rejects unsupported methods and malformed bodies before side effects', async () => {

@@ -1,5 +1,5 @@
 -- ============================================================
--- REDLIGHT AUTOMOTIVE — 05_seed.sql
+-- REDLIGHT AUTOPARTS — 05_seed.sql
 -- Done demo / Katalòg inisyal: 5 kategori + 13 pwodwi.
 -- Korije RLS pou tout vizitè ka wè kategori ak pwodwi yo avèk foto yo.
 -- ============================================================

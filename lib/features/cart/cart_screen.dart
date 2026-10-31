@@ -69,11 +69,19 @@ class CartScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF1B1E26)
+                        : Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF2C3240)
+                          : const Color(0xFFE5E7EB),
+                      width: 1.2,
+                    ),
+                    boxShadow: AppShadows.elevated(Theme.of(context).brightness == Brightness.dark),
                   ),
                   child: Column(
                     children: [
@@ -85,6 +93,7 @@ class CartScreen extends ConsumerWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               color: AppColors.textMutedDark,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
@@ -122,28 +131,37 @@ class _CartTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final product = item.product;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
+        color: isDark ? const Color(0xFF1B1E26) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? const Color(0xFF2C3240) : const Color(0xFFE5E7EB),
+          width: 1.2,
+        ),
+        boxShadow: AppShadows.elevated(isDark),
       ),
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(
-              width: 72,
-              height: 72,
-              child: product.imageUrl != null
-                  ? CachedNetworkImage(
-                      imageUrl: product.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, _, _) => _fallback(context),
-                    )
-                  : _fallback(context),
+          Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF14171E) : const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(10),
             ),
+            padding: const EdgeInsets.all(6),
+            clipBehavior: Clip.antiAlias,
+            child: product.imageUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: product.imageUrl!,
+                    fit: BoxFit.contain,
+                    errorWidget: (_, _, _) => _fallback(context),
+                  )
+                : _fallback(context),
           ),
           const SizedBox(width: 12),
           Expanded(
